@@ -34,8 +34,8 @@
     <!-- Font Awesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <!-- QRious Library for QR Code Generation -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+    <!-- QR Code Styling Library for Custom Shapes (Menggantikan QRious) -->
+    <script src="https://unpkg.com/qr-code-styling@1.5.0/lib/qr-code-styling.js"></script>
 
     <style>
         /* Custom scrollbar for better appearance */
@@ -161,6 +161,39 @@
                         </div>
                     </div>
 
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <!-- Gaya Pola (Dots) -->
+                        <div>
+                            <label for="qr-dots-style" class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Gaya Pola</label>
+                            <div class="relative">
+                                <select id="qr-dots-style" class="w-full appearance-none pl-4 pr-10 py-3 rounded-xl border border-slate-300 dark:border-slate-600 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none text-slate-700 dark:text-slate-200 shadow-sm bg-white dark:bg-slate-700 cursor-pointer">
+                                    <option value="square" selected>Kotak Standar</option>
+                                    <option value="dots">Titik-Titik (Dots)</option>
+                                    <option value="rounded">Melengkung</option>
+                                    <option value="classy">Klasik Elegan</option>
+                                </select>
+                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                    <i class="fa-solid fa-chevron-down text-slate-400 dark:text-slate-500 text-sm"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Gaya Bingkai Mata (Corners) -->
+                        <div>
+                            <label for="qr-corners-style" class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Gaya Bingkai Mata</label>
+                            <div class="relative">
+                                <select id="qr-corners-style" class="w-full appearance-none pl-4 pr-10 py-3 rounded-xl border border-slate-300 dark:border-slate-600 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none text-slate-700 dark:text-slate-200 shadow-sm bg-white dark:bg-slate-700 cursor-pointer">
+                                    <option value="square" selected>Kotak Standar</option>
+                                    <option value="dot">Bulat (Dot)</option>
+                                    <option value="extra-rounded">Melengkung Halus</option>
+                                </select>
+                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                    <i class="fa-solid fa-chevron-down text-slate-400 dark:text-slate-500 text-sm"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Size Slider -->
                     <div>
                         <div class="flex justify-between items-center mb-2">
@@ -208,8 +241,8 @@
                             <p class="text-sm text-slate-500 dark:text-slate-400 font-medium transition-colors">Masukkan teks atau URL<br>untuk melihat QR Code</p>
                         </div>
 
-                        <!-- Canvas for QR -->
-                        <canvas id="qr-canvas" class="hidden rounded-lg mx-auto transition-opacity duration-300" style="max-width: 100%; height: auto;"></canvas>
+                        <!-- Container for styled QR -->
+                        <div id="qr-canvas-container" class="hidden mx-auto transition-opacity duration-300 flex justify-center items-center opacity-0 overflow-hidden rounded-lg"></div>
                         
                     </div>
 
@@ -397,10 +430,12 @@
                 colorDarkHex: document.getElementById('color-dark-hex'),
                 colorLight: document.getElementById('color-light'),
                 colorLightHex: document.getElementById('color-light-hex'),
+                dotsStyle: document.getElementById('qr-dots-style'),
+                cornersStyle: document.getElementById('qr-corners-style'),
                 size: document.getElementById('qr-size'),
                 sizeValue: document.getElementById('size-value'),
                 error: document.getElementById('qr-error'),
-                canvas: document.getElementById('qr-canvas'),
+                qrCanvasContainer: document.getElementById('qr-canvas-container'),
                 emptyState: document.getElementById('empty-state'),
                 qrContainer: document.getElementById('qr-container'),
                 downloadSection: document.getElementById('download-section'),
@@ -423,11 +458,26 @@
                 aboutModal: document.getElementById('about-modal')
             };
 
-            // Initialize QRious instance
-            // We use padding so the QR code isn't flush against the edges of the image
-            const qr = new QRious({
-                element: elements.canvas,
-                padding: 15 
+            // Initialize QRCodeStyling instance
+            const qrCode = new QRCodeStyling({
+                width: 300,
+                height: 300,
+                type: "canvas",
+                data: "",
+                dotsOptions: {
+                    color: "#0f172a",
+                    type: "square"
+                },
+                backgroundOptions: {
+                    color: "#ffffff",
+                },
+                cornersSquareOptions: {
+                    type: "square",
+                    color: "#0f172a"
+                },
+                qrOptions: {
+                    errorCorrectionLevel: "M"
+                }
             });
 
             // State variable to track if an initial QR has been generated
@@ -450,8 +500,11 @@
             function updateUI(hasContent) {
                 if (hasContent) {
                     elements.emptyState.classList.add('hidden');
-                    elements.canvas.classList.remove('hidden');
-                    elements.canvas.style.opacity = '1';
+                    elements.qrCanvasContainer.classList.remove('hidden');
+                    setTimeout(() => {
+                        elements.qrCanvasContainer.style.opacity = '1';
+                        elements.qrCanvasContainer.classList.remove('opacity-0');
+                    }, 50);
                     
                     elements.downloadSection.classList.remove('hidden');
                     // Small delay to allow display:block to apply before changing opacity
@@ -462,8 +515,11 @@
                     elements.qrContainer.classList.add('hover:scale-105');
                 } else {
                     elements.emptyState.classList.remove('hidden');
-                    elements.canvas.classList.add('hidden');
-                    elements.canvas.style.opacity = '0';
+                    elements.qrCanvasContainer.style.opacity = '0';
+                    elements.qrCanvasContainer.classList.add('opacity-0');
+                    setTimeout(() => {
+                        elements.qrCanvasContainer.classList.add('hidden');
+                    }, 300);
                     
                     elements.downloadSection.classList.add('opacity-0');
                     setTimeout(() => {
@@ -483,14 +539,32 @@
                     return;
                 }
 
-                // Update QRious settings
-                qr.set({
-                    value: textValue,
-                    background: elements.colorLight.value,
-                    foreground: elements.colorDark.value,
-                    size: parseInt(elements.size.value),
-                    level: elements.error.value
+                // Update QRCodeStyling settings
+                qrCode.update({
+                    data: textValue,
+                    width: parseInt(elements.size.value),
+                    height: parseInt(elements.size.value),
+                    dotsOptions: {
+                        color: elements.colorDark.value,
+                        type: elements.dotsStyle.value
+                    },
+                    backgroundOptions: {
+                        color: elements.colorLight.value
+                    },
+                    cornersSquareOptions: {
+                        type: elements.cornersStyle.value,
+                        color: elements.colorDark.value
+                    },
+                    qrOptions: {
+                        errorCorrectionLevel: elements.error.value
+                    }
                 });
+
+                if (!isGenerated) {
+                    elements.qrCanvasContainer.innerHTML = ''; // clear any existing
+                    qrCode.append(elements.qrCanvasContainer);
+                    isGenerated = true;
+                }
 
                 updateUI(true);
             };
@@ -511,6 +585,9 @@
                 generateQRCode();
             });
 
+            elements.dotsStyle.addEventListener('change', generateQRCode);
+            elements.cornersStyle.addEventListener('change', generateQRCode);
+
             elements.size.addEventListener('input', (e) => {
                 elements.sizeValue.textContent = `${e.target.value}px`;
                 generateQRCode();
@@ -520,11 +597,9 @@
 
             // Download functionality
             elements.btnDownload.addEventListener('click', () => {
-                const canvas = elements.canvas;
-                // Double check if canvas has content
-                if (canvas.classList.contains('hidden')) return;
+                // Double check if container is hidden
+                if (elements.qrCanvasContainer.classList.contains('hidden')) return;
 
-                const link = document.createElement('a');
                 // Extract filename from URL or use default
                 let filename = 'QR_Code';
                 try {
@@ -537,32 +612,27 @@
                     }
                 } catch(e) {}
                 
-                link.download = `${filename}.png`;
-                link.href = canvas.toDataURL('image/png');
-                link.click();
+                qrCode.download({ name: filename, extension: "png" });
             });
 
             // Copy to Clipboard functionality (experimental, depends on browser support)
             elements.btnCopy.addEventListener('click', async () => {
                 try {
-                    elements.canvas.toBlob(async (blob) => {
-                        try {
-                            const item = new ClipboardItem({ 'image/png': blob });
-                            await navigator.clipboard.write([item]);
-                            
-                            // Visual feedback
-                            const originalHTML = elements.btnCopy.innerHTML;
-                            elements.btnCopy.innerHTML = '<i class="fa-solid fa-check text-green-500"></i> Tersalin!';
-                            setTimeout(() => {
-                                elements.btnCopy.innerHTML = originalHTML;
-                            }, 2000);
-                        } catch (err) {
-                            console.error('Failed to copy image: ', err);
-                            alert('Gagal menyalin gambar. Browser Anda mungkin tidak mendukung fitur ini.');
-                        }
-                    });
+                    const blob = await qrCode.getRawData("png");
+                    if (blob) {
+                        const item = new ClipboardItem({ 'image/png': blob });
+                        await navigator.clipboard.write([item]);
+                        
+                        // Visual feedback
+                        const originalHTML = elements.btnCopy.innerHTML;
+                        elements.btnCopy.innerHTML = '<i class="fa-solid fa-check text-green-500"></i> Tersalin!';
+                        setTimeout(() => {
+                            elements.btnCopy.innerHTML = originalHTML;
+                        }, 2000);
+                    }
                 } catch (err) {
-                    console.error('Blob conversion failed: ', err);
+                    console.error('Failed to copy image: ', err);
+                    alert('Gagal menyalin gambar. Browser Anda mungkin tidak mendukung fitur ini.');
                 }
             });
 
