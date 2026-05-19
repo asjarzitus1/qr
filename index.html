@@ -34,7 +34,7 @@
     <!-- Font Awesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <!-- QR Code Styling Library for Custom Shapes (Menggantikan QRious) -->
+    <!-- QR Code Styling Library for Custom Shapes -->
     <script src="https://unpkg.com/qr-code-styling@1.5.0/lib/qr-code-styling.js"></script>
 
     <style>
@@ -204,19 +204,29 @@
                             class="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-primary">
                     </div>
 
-                    <!-- Error Correction Level -->
-                    <div>
-                        <label for="qr-error" class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Level Koreksi Error <i class="fa-regular fa-circle-question text-slate-400 dark:text-slate-500 ml-1" title="Semakin tinggi levelnya, semakin mudah dibaca jika QR rusak, tapi pola akan semakin padat."></i></label>
-                        <div class="relative">
-                            <select id="qr-error" class="w-full appearance-none pl-4 pr-10 py-3 rounded-xl border border-slate-300 dark:border-slate-600 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none text-slate-700 dark:text-slate-200 shadow-sm bg-white dark:bg-slate-700 cursor-pointer">
-                                <option value="L">Rendah (L - 7%)</option>
-                                <option value="M" selected>Sedang (M - 15%)</option>
-                                <option value="Q">Kuartil (Q - 25%)</option>
-                                <option value="H">Tinggi (H - 30%)</option>
-                            </select>
-                            <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                                <i class="fa-solid fa-chevron-down text-slate-400 dark:text-slate-500 text-sm"></i>
+                    <!-- Error Correction & Text Option -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 items-end">
+                        <div class="w-full">
+                            <label for="qr-error" class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Level Koreksi Error</label>
+                            <div class="relative">
+                                <select id="qr-error" class="w-full appearance-none pl-4 pr-10 py-3 rounded-xl border border-slate-300 dark:border-slate-600 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none text-slate-700 dark:text-slate-200 shadow-sm bg-white dark:bg-slate-700 cursor-pointer">
+                                    <option value="L">Rendah (L - 7%)</option>
+                                    <option value="M" selected>Sedang (M - 15%)</option>
+                                    <option value="Q">Kuartil (Q - 25%)</option>
+                                    <option value="H">Tinggi (H - 30%)</option>
+                                </select>
+                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                    <i class="fa-solid fa-chevron-down text-slate-400 dark:text-slate-500 text-sm"></i>
+                                </div>
                             </div>
+                        </div>
+                        
+                        <!-- SCAN ME Text Checkbox -->
+                        <div class="w-full flex items-center h-[50px]">
+                            <label class="flex items-center gap-3 cursor-pointer group">
+                                <input type="checkbox" id="qr-show-text" class="w-5 h-5 text-primary bg-slate-100 border-slate-300 rounded focus:ring-primary dark:focus:ring-primary dark:ring-offset-slate-800 focus:ring-2 dark:bg-slate-700 dark:border-slate-600 cursor-pointer transition-colors" checked>
+                                <span class="text-sm font-semibold text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors select-none">Tampilkan "SCAN ME"</span>
+                            </label>
                         </div>
                     </div>
                 </div>
@@ -241,8 +251,8 @@
                             <p class="text-sm text-slate-500 dark:text-slate-400 font-medium transition-colors">Masukkan teks atau URL<br>untuk melihat QR Code</p>
                         </div>
 
-                        <!-- Container for styled QR -->
-                        <div id="qr-canvas-container" class="hidden mx-auto transition-opacity duration-300 flex justify-center items-center opacity-0 overflow-hidden rounded-lg"></div>
+                        <!-- Container for styled QR (Custom Canvas) -->
+                        <div id="qr-canvas-container" class="hidden mx-auto transition-opacity duration-300 flex justify-center items-center opacity-0 overflow-hidden rounded-lg w-full max-w-full"></div>
                         
                     </div>
 
@@ -435,6 +445,7 @@
                 size: document.getElementById('qr-size'),
                 sizeValue: document.getElementById('size-value'),
                 error: document.getElementById('qr-error'),
+                showTextToggle: document.getElementById('qr-show-text'), // Checkbox Scan Me
                 qrCanvasContainer: document.getElementById('qr-canvas-container'),
                 emptyState: document.getElementById('empty-state'),
                 qrContainer: document.getElementById('qr-container'),
@@ -458,30 +469,19 @@
                 aboutModal: document.getElementById('about-modal')
             };
 
-            // Initialize QRCodeStyling instance
+            // Initialize QRCodeStyling instance (Data processor only)
             const qrCode = new QRCodeStyling({
                 width: 300,
                 height: 300,
                 type: "canvas",
                 data: "",
-                dotsOptions: {
-                    color: "#0f172a",
-                    type: "square"
-                },
-                backgroundOptions: {
-                    color: "#ffffff",
-                },
-                cornersSquareOptions: {
-                    type: "square",
-                    color: "#0f172a"
-                },
-                qrOptions: {
-                    errorCorrectionLevel: "M"
-                }
+                dotsOptions: { color: "#0f172a", type: "square" },
+                backgroundOptions: { color: "#ffffff" },
+                cornersSquareOptions: { type: "square", color: "#0f172a" },
+                qrOptions: { errorCorrectionLevel: "M" }
             });
 
-            // State variable to track if an initial QR has been generated
-            let isGenerated = false;
+            let compositeCanvas = null; // Menyimpan kanvas final gabungan QR + Teks
 
             // Debounce function to delay generation while typing
             function debounce(func, wait) {
@@ -507,7 +507,6 @@
                     }, 50);
                     
                     elements.downloadSection.classList.remove('hidden');
-                    // Small delay to allow display:block to apply before changing opacity
                     setTimeout(() => {
                         elements.downloadSection.classList.remove('opacity-0');
                     }, 50);
@@ -524,14 +523,14 @@
                     elements.downloadSection.classList.add('opacity-0');
                     setTimeout(() => {
                         elements.downloadSection.classList.add('hidden');
-                    }, 500); // match transition duration
+                    }, 500);
                     
                     elements.qrContainer.classList.remove('hover:scale-105');
                 }
             }
 
-            // Main function to generate QR Code
-            const generateQRCode = () => {
+            // Main function to generate QR Code & Merge with Text
+            const generateQRCode = async () => {
                 const textValue = elements.text.value.trim();
 
                 if (!textValue) {
@@ -539,11 +538,13 @@
                     return;
                 }
 
-                // Update QRCodeStyling settings
+                const qrSize = parseInt(elements.size.value);
+
+                // Update setting QR dasar
                 qrCode.update({
                     data: textValue,
-                    width: parseInt(elements.size.value),
-                    height: parseInt(elements.size.value),
+                    width: qrSize,
+                    height: qrSize,
                     dotsOptions: {
                         color: elements.colorDark.value,
                         type: elements.dotsStyle.value
@@ -560,13 +561,64 @@
                     }
                 });
 
-                if (!isGenerated) {
-                    elements.qrCanvasContainer.innerHTML = ''; // clear any existing
-                    qrCode.append(elements.qrCanvasContainer);
-                    isGenerated = true;
-                }
+                // Proses Menggabungkan QR dengan Teks "SCAN ME"
+                try {
+                    const blob = await qrCode.getRawData("png");
+                    const img = new Image();
+                    const url = URL.createObjectURL(blob);
 
-                updateUI(true);
+                    img.onload = () => {
+                        const showText = elements.showTextToggle.checked;
+                        
+                        // Kalkulasi ukuran kanvas baru
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        
+                        // Jika teks diaktifkan, tinggi kanvas ditambah 15% dari ukuran QR
+                        const textHeight = showText ? (qrSize * 0.15) : 0; 
+                        
+                        canvas.width = qrSize;
+                        canvas.height = qrSize + textHeight;
+
+                        // 1. Gambar latar belakang (supaya warna senada)
+                        ctx.fillStyle = elements.colorLight.value;
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                        // 2. Gambar QR Code di bagian atas
+                        ctx.drawImage(img, 0, 0);
+
+                        // 3. Tambahkan Teks "SCAN ME" jika diaktifkan
+                        if (showText) {
+                            ctx.fillStyle = elements.colorDark.value;
+                            // Ukuran font proporsional dengan ukuran gambar
+                            const fontSize = Math.max(16, qrSize * 0.07); 
+                            ctx.font = `800 ${fontSize}px Inter, sans-serif`;
+                            ctx.textAlign = "center";
+                            ctx.textBaseline = "middle";
+                            ctx.letterSpacing = "2px";
+                            
+                            // Taruh teks tepat di tengah-tengah ruang kosong bawah
+                            ctx.fillText("SCAN ME", canvas.width / 2, qrSize + (textHeight / 2));
+                        }
+
+                        // Update tampilan Pratinjau di layar
+                        canvas.style.maxWidth = "100%";
+                        canvas.style.height = "auto";
+                        canvas.style.borderRadius = "0.5rem"; // rounded-lg
+                        
+                        elements.qrCanvasContainer.innerHTML = ''; 
+                        elements.qrCanvasContainer.appendChild(canvas);
+                        
+                        // Simpan kanvas final untuk fitur Download dan Copy
+                        compositeCanvas = canvas; 
+
+                        URL.revokeObjectURL(url);
+                        updateUI(true);
+                    };
+                    img.src = url;
+                } catch (error) {
+                    console.error("Gagal merender QR:", error);
+                }
             };
 
             // Event Listeners for inputs
@@ -587,6 +639,7 @@
 
             elements.dotsStyle.addEventListener('change', generateQRCode);
             elements.cornersStyle.addEventListener('change', generateQRCode);
+            elements.showTextToggle.addEventListener('change', generateQRCode);
 
             elements.size.addEventListener('input', (e) => {
                 elements.sizeValue.textContent = `${e.target.value}px`;
@@ -597,8 +650,7 @@
 
             // Download functionality
             elements.btnDownload.addEventListener('click', () => {
-                // Double check if container is hidden
-                if (elements.qrCanvasContainer.classList.contains('hidden')) return;
+                if (elements.qrCanvasContainer.classList.contains('hidden') || !compositeCanvas) return;
 
                 // Extract filename from URL or use default
                 let filename = 'QR_Code';
@@ -612,24 +664,31 @@
                     }
                 } catch(e) {}
                 
-                qrCode.download({ name: filename, extension: "png" });
+                // Download dari kanvas gabungan
+                const link = document.createElement('a');
+                link.download = filename + '.png';
+                link.href = compositeCanvas.toDataURL('image/png');
+                link.click();
             });
 
-            // Copy to Clipboard functionality (experimental, depends on browser support)
-            elements.btnCopy.addEventListener('click', async () => {
+            // Copy to Clipboard functionality
+            elements.btnCopy.addEventListener('click', () => {
+                if (!compositeCanvas) return;
+                
                 try {
-                    const blob = await qrCode.getRawData("png");
-                    if (blob) {
-                        const item = new ClipboardItem({ 'image/png': blob });
-                        await navigator.clipboard.write([item]);
-                        
-                        // Visual feedback
-                        const originalHTML = elements.btnCopy.innerHTML;
-                        elements.btnCopy.innerHTML = '<i class="fa-solid fa-check text-green-500"></i> Tersalin!';
-                        setTimeout(() => {
-                            elements.btnCopy.innerHTML = originalHTML;
-                        }, 2000);
-                    }
+                    compositeCanvas.toBlob(async (blob) => {
+                        if (blob) {
+                            const item = new ClipboardItem({ 'image/png': blob });
+                            await navigator.clipboard.write([item]);
+                            
+                            // Visual feedback
+                            const originalHTML = elements.btnCopy.innerHTML;
+                            elements.btnCopy.innerHTML = '<i class="fa-solid fa-check text-green-500"></i> Tersalin!';
+                            setTimeout(() => {
+                                elements.btnCopy.innerHTML = originalHTML;
+                            }, 2000);
+                        }
+                    }, 'image/png');
                 } catch (err) {
                     console.error('Failed to copy image: ', err);
                     alert('Gagal menyalin gambar. Browser Anda mungkin tidak mendukung fitur ini.');
@@ -692,7 +751,7 @@
             };
 
             elements.btnAbout?.addEventListener('click', (e) => {
-                e.preventDefault(); // Mencegah pindah ke atas halaman saat klik link "#"
+                e.preventDefault(); 
                 toggleAboutModal(true);
             });
             elements.btnCloseAbout?.addEventListener('click', () => toggleAboutModal(false));
