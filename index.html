@@ -71,7 +71,7 @@
             <div class="flex items-center gap-4">
                 <nav class="hidden sm:flex gap-4 text-sm font-medium text-slate-600 dark:text-slate-400">
                     <a href="#" class="hover:text-primary dark:hover:text-primary transition-colors">Beranda</a>
-                    <a href="#" class="hover:text-primary dark:hover:text-primary transition-colors">Tentang</a>
+                    <a href="#" id="btn-about" class="hover:text-primary dark:hover:text-primary transition-colors">Tentang</a>
                 </nav>
                 
                 <!-- Dark Mode Toggle Button -->
@@ -258,6 +258,52 @@
         </div>
     </div>
 
+    <!-- About Application Modal -->
+    <div id="about-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/40 dark:bg-slate-900/80 backdrop-blur-sm transition-opacity opacity-0 duration-300">
+        <div class="bg-white dark:bg-slate-800 w-full max-w-md rounded-2xl shadow-2xl p-6 mx-4 transform scale-95 transition-all duration-300 flex flex-col border border-transparent dark:border-slate-700">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2 transition-colors">
+                    <span class="bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 p-1.5 rounded-lg flex items-center justify-center">
+                        <i class="fa-solid fa-circle-info"></i>
+                    </span> 
+                    Tentang Aplikasi
+                </h3>
+                <button id="btn-close-about" class="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-700">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            
+            <div class="text-sm text-slate-600 dark:text-slate-300 space-y-4 mb-6 leading-relaxed transition-colors">
+                <p><b>QR Generator</b> adalah alat bantu modern untuk membuat QR Code secara instan, gratis, dan tanpa batas waktu kedaluwarsa.</p>
+                
+                <ul class="space-y-3">
+                    <li class="flex gap-3">
+                        <i class="fa-solid fa-shield-halved text-green-500 text-base mt-0.5"></i>
+                        <span><b>100% Aman & Privat:</b> Seluruh proses pembuatan QR Code terjadi langsung di perangkat Anda. Data tidak pernah dikirim ke server kami.</span>
+                    </li>
+                    <li class="flex gap-3">
+                        <i class="fa-solid fa-wand-magic-sparkles text-primary text-base mt-0.5"></i>
+                        <span><b>Kecerdasan Buatan (AI):</b> Dilengkapi asisten pintar untuk membantu Anda menyusun format vCard atau kata sandi WiFi dengan mudah.</span>
+                    </li>
+                    <li class="flex gap-3">
+                        <i class="fa-solid fa-palette text-orange-500 text-base mt-0.5"></i>
+                        <span><b>Kustomisasi:</b> Bebas atur warna visual dan resolusi unduhan agar sesuai dengan kebutuhan desain Anda.</span>
+                    </li>
+                </ul>
+                
+                <p class="text-xs text-center text-slate-400 dark:text-slate-500 pt-4 border-t border-slate-100 dark:border-slate-700 mt-4">
+                    Dikembangkan oleh <span class="font-bold text-primary">A S J A R</span> &copy; 2026
+                </p>
+            </div>
+
+            <div class="flex justify-end mt-auto">
+                <button id="btn-okay-about" class="px-6 py-2.5 w-full text-sm font-medium text-white bg-primary hover:bg-primaryHover shadow-md shadow-primary/20 rounded-xl transition-all active:scale-95">
+                    Tutup
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Footer diubah menjadi 3 bagian (Kiri, Tengah, Kanan) -->
     <footer class="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 py-4 mt-auto sticky bottom-0 z-20 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] dark:shadow-[0_-4px_10px_rgba(0,0,0,0.2)] transition-colors duration-300">
         <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 w-full relative flex justify-between items-center text-xs sm:text-sm text-slate-600 dark:text-slate-400">
@@ -368,7 +414,13 @@
                 btnGenerateAi: document.getElementById('btn-generate-ai'),
                 aiModal: document.getElementById('ai-modal'),
                 aiPrompt: document.getElementById('ai-prompt'),
-                aiError: document.getElementById('ai-error')
+                aiError: document.getElementById('ai-error'),
+                
+                // About Elements
+                btnAbout: document.getElementById('btn-about'),
+                btnCloseAbout: document.getElementById('btn-close-about'),
+                btnOkayAbout: document.getElementById('btn-okay-about'),
+                aboutModal: document.getElementById('about-modal')
             };
 
             // Initialize QRious instance
@@ -545,6 +597,36 @@
             elements.btnOpenAi?.addEventListener('click', () => toggleAiModal(true));
             elements.btnCloseAi?.addEventListener('click', () => toggleAiModal(false));
             elements.btnCancelAi?.addEventListener('click', () => toggleAiModal(false));
+
+            // Toggle About Modal
+            const toggleAboutModal = (show) => {
+                if (!elements.aboutModal) return;
+                
+                if (show) {
+                    elements.aboutModal.classList.remove('hidden');
+                    elements.aboutModal.classList.add('flex');
+                    setTimeout(() => {
+                        elements.aboutModal.classList.remove('opacity-0');
+                        elements.aboutModal.querySelector('div').classList.remove('scale-95');
+                        elements.aboutModal.querySelector('div').classList.add('scale-100');
+                    }, 10);
+                } else {
+                    elements.aboutModal.classList.add('opacity-0');
+                    elements.aboutModal.querySelector('div').classList.remove('scale-100');
+                    elements.aboutModal.querySelector('div').classList.add('scale-95');
+                    setTimeout(() => {
+                        elements.aboutModal.classList.add('hidden');
+                        elements.aboutModal.classList.remove('flex');
+                    }, 300);
+                }
+            };
+
+            elements.btnAbout?.addEventListener('click', (e) => {
+                e.preventDefault(); // Mencegah pindah ke atas halaman saat klik link "#"
+                toggleAboutModal(true);
+            });
+            elements.btnCloseAbout?.addEventListener('click', () => toggleAboutModal(false));
+            elements.btnOkayAbout?.addEventListener('click', () => toggleAboutModal(false));
 
             // Fetch to Gemini API with exponential backoff
             async function fetchGeminiWithBackoff(prompt, maxRetries = 5) {
