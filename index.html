@@ -258,17 +258,27 @@
         </div>
     </div>
 
-    <!-- Footer diubah menjadi sticky dan teks diubah -->
+    <!-- Footer diubah menjadi 3 bagian (Kiri, Tengah, Kanan) -->
     <footer class="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 py-4 mt-auto sticky bottom-0 z-20 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] dark:shadow-[0_-4px_10px_rgba(0,0,0,0.2)] transition-colors duration-300">
-        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 w-full flex flex-col sm:flex-row justify-between items-center text-sm text-slate-600 dark:text-slate-400">
-            <div class="text-center sm:text-left mb-2 sm:mb-0">
-                <strong>Copyright &copy; 2026 
-                    <a href="https://www.instagram.com/a_s_j_a_r?igsh=ZzJvZms0NXUxZGFp" target="_blank" rel="noopener noreferrer" class="text-primary font-bold hover:text-primaryHover hover:underline transition-colors">A S J A R</a>.
-                </strong> All rights reserved.
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 w-full relative flex justify-between items-center text-xs sm:text-sm text-slate-600 dark:text-slate-400">
+            
+            <!-- Sisi Kiri (Copyright) -->
+            <div class="text-left z-10">
+                <span>Copyright &copy; 2026</span> <span class="hidden sm:inline">All rights reserved.</span>
             </div>
-            <div class="text-center sm:text-right mt-1 sm:mt-0">
+            
+            <!-- Posisi Tengah (Link A S J A R) -->
+            <div class="absolute left-1/2 transform -translate-x-1/2 z-10">
+                <a href="https://www.instagram.com/a_s_j_a_r?igsh=ZzJvZms0NXUxZGFp" target="_blank" rel="noopener noreferrer" class="text-primary font-bold hover:text-primaryHover hover:underline transition-colors tracking-widest">
+                    A S J A R
+                </a>
+            </div>
+
+            <!-- Sisi Kanan (Versi) -->
+            <div class="text-right z-10">
                 <b>Versi</b> 1.0.0
             </div>
+
         </div>
     </footer>
 
