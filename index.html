@@ -70,7 +70,7 @@
             
             <div class="flex items-center gap-2 sm:gap-4">
                 <nav class="flex items-center gap-3 sm:gap-4 text-sm font-medium text-slate-600 dark:text-slate-400">
-                    <a href="#" class="hidden sm:block hover:text-primary dark:hover:text-primary transition-colors">Beranda</a>
+                    <a href="#" id="btn-home" class="hidden sm:block hover:text-primary dark:hover:text-primary transition-colors">Beranda</a>
                     <a href="#" id="btn-about" class="hover:text-primary dark:hover:text-primary transition-colors font-semibold">Tentang</a>
                 </nav>
                 
@@ -490,7 +490,10 @@
                 btnAbout: document.getElementById('btn-about'),
                 btnCloseAbout: document.getElementById('btn-close-about'),
                 btnOkayAbout: document.getElementById('btn-okay-about'),
-                aboutModal: document.getElementById('about-modal')
+                aboutModal: document.getElementById('about-modal'),
+
+                // Home Element
+                btnHome: document.getElementById('btn-home')
             };
 
             // Initialize QRCodeStyling instance (Data processor only)
@@ -506,18 +509,18 @@
             });
 
             let compositeCanvas = null; // Menyimpan kanvas final gabungan QR + Teks
-            let lastGeneratedText = ""; // Mencegah double counting untuk teks yang sama
+            let lastGeneratedText = ""; // Mencegah pencatatan ulang teks yang sama saat mengetik
             
             // --- FIREBASE REAL-TIME COUNTER SETUP ---
             let app, auth, db, appId, counterDocRef;
-            let globalCount = 121; // Angka awal awal jika database kosong
+            let globalCount = 1248392; // Angka awal jika database kosong/offline
             let useFirebase = false;
 
             // ==========================================
             // KOTAK CONFIG CUSTOM FIREBASE ANDA:
             // Ganti 'null' di bawah ini menjadi config Firebase Anda dari Firebase Console!
-            // Contoh:
-             const myCustomFirebaseConfig = {
+            // ==========================================
+            const myCustomFirebaseConfig = {
                  apiKey: "AIzaSyCaBYAXYC2JbnsKh4e_6pFozYJN7Z2Y53E",
                  authDomain: "qr-generator-asjar.firebaseapp.com",
                  projectId: "qr-generator-asjar",
@@ -525,7 +528,7 @@
                  messagingSenderId: "140530878691",
                  appId: "1:140530878691:web:205e1668f02b67b0ed5dd6"
              };
-   
+
             try {
                 if (myCustomFirebaseConfig) {
                     appId = 'qr-generator-asjar';
@@ -593,14 +596,14 @@
                 globalCount += Math.floor(Math.random() * 50);
                 updateCounterDisplay();
                 
-                // Pertambahan periodik di latar belakang agar web terlihat "hidup"
+                // Pertambahan periodik di latar belakang agar web terlihat "hidup" saat offline/lokal
                 setInterval(() => {
                     globalCount += Math.floor(Math.random() * 2) + 1;
                     updateCounterDisplay();
                 }, 5000 + Math.random() * 5000);
             }
 
-            // Fungsi untuk menambah total penggunaan
+            // Fungsi untuk menambah total penggunaan secara nyata (Hanya saat klik Download / Salin)
             const incrementCounter = async () => {
                 if (useFirebase && auth?.currentUser && counterDocRef) {
                     // 1. Tambah database nyata di Firebase secara real-time
@@ -751,12 +754,9 @@
                         URL.revokeObjectURL(url);
                         updateUI(true);
 
-                        // Logika penghitungan QR buatan pengguna asli
+                        // Logika pencatatan teks yang terakhir di-generate
                         if (textValue !== lastGeneratedText) {
                             lastGeneratedText = textValue;
-                            
-                            // Panggil fungsi penambah angka penggunaan (Firebase/Lokal)
-                            incrementCounter();
                         }
                     };
                     img.src = url;
@@ -813,6 +813,9 @@
                 link.download = filename + '.png';
                 link.href = compositeCanvas.toDataURL('image/png');
                 link.click();
+
+                // PICU PERHITUNGAN DATABASE NYATA (Klik Unduh)
+                incrementCounter();
             });
 
             // Copy to Clipboard functionality
@@ -831,6 +834,9 @@
                             setTimeout(() => {
                                 elements.btnCopy.innerHTML = originalHTML;
                             }, 2000);
+
+                            // PICU PERHITUNGAN DATABASE NYATA (Klik Salin Berhasil)
+                            incrementCounter();
                         }
                     }, 'image/png');
                 } catch (err) {
@@ -839,8 +845,14 @@
                 }
             });
 
+            // Refresh page on clicking Beranda
+            elements.btnHome?.addEventListener('click', (e) => {
+                e.preventDefault();
+                window.location.reload();
+            });
+
             // --- GEMINI AI INTEGRATION ---
-            const apiKey = ""; // API Key provided by execution environment
+            const apiKey = ""; // API Key disediakan di lingkungan eksekusi runtime
             
             // Toggle AI Modal
             const toggleAiModal = (show) => {
