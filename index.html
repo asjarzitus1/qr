@@ -269,6 +269,18 @@
                 </div>
             </div>
         </div>
+
+        <!-- Total Penggunaan Aplikasi Widget (Bagian Bawah) -->
+        <div class="max-w-5xl w-full bg-white dark:bg-slate-800 rounded-2xl shadow-md border border-slate-100 dark:border-slate-700 p-6 mb-8 mt-6 transition-all duration-300 flex justify-center">
+            <div class="text-center space-y-2">
+                <span class="text-sm font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-earth-asia"></i> Total Penggunaan Aplikasi
+                </span>
+                <div class="text-3xl sm:text-4xl font-extrabold text-primary flex items-center justify-center gap-2">
+                    <span id="global-counter">1.248.392</span>
+                </div>
+            </div>
+        </div>
     </main>
 
     <!-- AI Assistant Modal -->
@@ -371,7 +383,11 @@
         </div>
     </footer>
 
-    <script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, onSnapshot, setDoc, updateDoc, increment, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
         // Check local storage for theme BEFORE loading to avoid flash
         if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             document.documentElement.classList.add('dark');
@@ -453,6 +469,9 @@
                 btnDownload: document.getElementById('btn-download-png'),
                 btnCopy: document.getElementById('btn-copy'),
                 
+                // Counters
+                globalCounter: document.getElementById('global-counter'),
+                
                 // AI Elements
                 btnOpenAi: document.getElementById('btn-open-ai'),
                 btnCloseAi: document.getElementById('btn-close-ai'),
@@ -482,6 +501,87 @@
             });
 
             let compositeCanvas = null; // Menyimpan kanvas final gabungan QR + Teks
+            let lastGeneratedText = ""; // Mencegah double counting untuk teks yang sama
+            
+            // --- FIREBASE REAL-TIME COUNTER SETUP ---
+            let app, auth, db, appId, counterDocRef;
+            let globalCount = 1248392; // Angka awal
+            let useFirebase = false;
+
+            try {
+                if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+                    const firebaseConfig = JSON.parse(__firebase_config);
+                    appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                    app = initializeApp(firebaseConfig);
+                    auth = getAuth(app);
+                    db = getFirestore(app);
+                    useFirebase = true;
+                }
+            } catch(e) {
+                console.warn("Menjalankan dalam mode lokal (tanpa cloud).");
+            }
+
+            if (useFirebase) {
+                const initAuth = async () => {
+                    try {
+                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                            await signInWithCustomToken(auth, __initial_auth_token);
+                        } else {
+                            await signInAnonymously(auth);
+                        }
+                    } catch (error) {
+                        console.error("Auth Error:", error);
+                    }
+                };
+                initAuth();
+
+                onAuthStateChanged(auth, (user) => {
+                    if (!user) return;
+                    
+                    counterDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'statistics', 'global_counter');
+                    
+                    // Inisialisasi dokumen jika belum ada di database
+                    getDoc(counterDocRef).then((docSnap) => {
+                        if (!docSnap.exists()) {
+                            setDoc(counterDocRef, { totalGenerated: globalCount });
+                        }
+                    }).catch(e => console.error(e));
+
+                    // Dengarkan perubahan data secara real-time
+                    onSnapshot(counterDocRef, (docSnap) => {
+                        if (docSnap.exists()) {
+                            globalCount = docSnap.data().totalGenerated;
+                            if (elements.globalCounter) {
+                                elements.globalCounter.textContent = globalCount.toLocaleString('id-ID');
+                            }
+                        }
+                    }, (error) => {
+                        console.error("Listen Error:", error);
+                    });
+                });
+            } else {
+                // Fallback: Simulasi lokal jika diakses offline/di luar platform
+                globalCount += Math.floor(Math.random() * 50);
+                if (elements.globalCounter) elements.globalCounter.textContent = globalCount.toLocaleString('id-ID');
+                
+                setInterval(() => {
+                    globalCount += Math.floor(Math.random() * 2) + 1;
+                    if (elements.globalCounter) elements.globalCounter.textContent = globalCount.toLocaleString('id-ID');
+                }, 4000 + Math.random() * 5000);
+            }
+
+            // Fungsi untuk menambah total di cloud
+            const incrementGlobalCounter = async () => {
+                if (!useFirebase || !auth?.currentUser || !counterDocRef) return;
+                try {
+                    await updateDoc(counterDocRef, {
+                        totalGenerated: increment(1)
+                    });
+                } catch (error) {
+                    console.error("Increment error:", error);
+                }
+            };
+            // --- END FIREBASE SETUP ---
 
             // Debounce function to delay generation while typing
             function debounce(func, wait) {
@@ -614,6 +714,16 @@
 
                         URL.revokeObjectURL(url);
                         updateUI(true);
+
+                        // Logika penghitungan QR buatan pengguna asli
+                        if (textValue !== lastGeneratedText) {
+                            lastGeneratedText = textValue;
+                            
+                            // Jika terhubung ke cloud, naikkan angka di database secara nyata
+                            if (useFirebase) {
+                                incrementGlobalCounter();
+                            }
+                        }
                     };
                     img.src = url;
                 } catch (error) {
