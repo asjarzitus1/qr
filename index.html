@@ -513,7 +513,7 @@
             
             // --- FIREBASE REAL-TIME COUNTER SETUP ---
             let app, auth, db, appId, counterDocRef;
-            let globalCount = 1248392; // Angka awal jika database kosong/offline
+            let globalCount = 1248392; // Angka dasar awal jika dokumen database baru/kosong
             let useFirebase = false;
 
             // ==========================================
@@ -545,7 +545,7 @@
                     useFirebase = true;
                 }
             } catch(e) {
-                console.warn("Menjalankan dalam mode lokal (tanpa cloud).");
+                console.warn("Gagal inisialisasi Firebase. Menjalankan dalam mode statis.");
             }
 
             // Fungsi pembantu untuk memperbarui teks angka di layar secara lokal
@@ -579,9 +579,9 @@
                         if (!docSnap.exists()) {
                             setDoc(counterDocRef, { totalGenerated: globalCount });
                         }
-                    }).catch(e => console.error(e));
+                    }).catch(e => console.error("Firestore Init Error:", e));
 
-                    // Dengarkan perubahan data secara real-time
+                    // Dengarkan perubahan data secara real-time dari Firebase
                     onSnapshot(counterDocRef, (docSnap) => {
                         if (docSnap.exists()) {
                             globalCount = docSnap.data().totalGenerated;
@@ -592,21 +592,14 @@
                     });
                 });
             } else {
-                // Fallback: Simulasi lokal jika diakses di luar platform
-                globalCount += Math.floor(Math.random() * 50);
+                // Tanpa Firebase, angka akan tetap statis pada nilai dasar awal tanpa simulasi berkala
                 updateCounterDisplay();
-                
-                // Pertambahan periodik di latar belakang agar web terlihat "hidup" saat offline/lokal
-                setInterval(() => {
-                    globalCount += Math.floor(Math.random() * 2) + 1;
-                    updateCounterDisplay();
-                }, 5000 + Math.random() * 5000);
             }
 
             // Fungsi untuk menambah total penggunaan secara nyata (Hanya saat klik Download / Salin)
             const incrementCounter = async () => {
                 if (useFirebase && auth?.currentUser && counterDocRef) {
-                    // 1. Tambah database nyata di Firebase secara real-time
+                    // Hanya menambah database nyata di Firebase jika terkoneksi
                     try {
                         await updateDoc(counterDocRef, {
                             totalGenerated: increment(1)
@@ -614,10 +607,6 @@
                     } catch (error) {
                         console.error("Increment error:", error);
                     }
-                } else {
-                    // 2. Tambah di layar instan secara lokal jika tidak memakai Firebase
-                    globalCount++;
-                    updateCounterDisplay();
                 }
             };
             // --- END FIREBASE SETUP ---
