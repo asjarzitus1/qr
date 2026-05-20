@@ -503,32 +503,36 @@
             let compositeCanvas = null; // Menyimpan kanvas final gabungan QR + Teks
             let lastGeneratedText = ""; // Mencegah double counting untuk teks yang sama
             
-            // --- FIREBASE REAL-TIME COUNTER SETUP ---
+          // --- FIREBASE REAL-TIME COUNTER SETUP ---
             let app, auth, db, appId, counterDocRef;
-            let globalCount = 1248392; // Angka awal
-            let useFirebase = false;
+            let globalCount = 94; // Angka awal
+            let useFirebase = true; // PASTIKAN INI TRUE
+
+            // 1. TEMPEL KODE FIREBASE ANDA DI SINI
+            const firebaseConfig = {
+                apiKey: "AIzaSyCaBYAXYC2JbnsKh4e_6pFozYJN7Z2Y53E",
+                authDomain: "qr-generator-asjar.firebaseapp.com",
+                projectId: "qr-generator-asjar",
+                storageBucket: "qr-generator-asjar.firebasestorage.app",
+                messagingSenderId: "140530878691",
+                appId: "1:140530878691:web:205e1668f02b67b0ed5dd6"
+            };
 
             try {
-                if (typeof __firebase_config !== 'undefined' && __firebase_config) {
-                    const firebaseConfig = JSON.parse(__firebase_config);
-                    appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-                    app = initializeApp(firebaseConfig);
-                    auth = getAuth(app);
-                    db = getFirestore(app);
-                    useFirebase = true;
-                }
+                appId = 'qr-generator-asjar'; 
+                app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
             } catch(e) {
-                console.warn("Menjalankan dalam mode lokal (tanpa cloud).");
+                console.warn("Firebase gagal dimuat, menggunakan mode lokal.");
+                useFirebase = false;
             }
 
             if (useFirebase) {
                 const initAuth = async () => {
                     try {
-                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                            await signInWithCustomToken(auth, __initial_auth_token);
-                        } else {
-                            await signInAnonymously(auth);
-                        }
+                        // Cukup gunakan login anonim untuk web publik
+                        await signInAnonymously(auth);
                     } catch (error) {
                         console.error("Auth Error:", error);
                     }
@@ -540,14 +544,12 @@
                     
                     counterDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'statistics', 'global_counter');
                     
-                    // Inisialisasi dokumen jika belum ada di database
                     getDoc(counterDocRef).then((docSnap) => {
                         if (!docSnap.exists()) {
                             setDoc(counterDocRef, { totalGenerated: globalCount });
                         }
                     }).catch(e => console.error(e));
 
-                    // Dengarkan perubahan data secara real-time
                     onSnapshot(counterDocRef, (docSnap) => {
                         if (docSnap.exists()) {
                             globalCount = docSnap.data().totalGenerated;
@@ -555,32 +557,9 @@
                                 elements.globalCounter.textContent = globalCount.toLocaleString('id-ID');
                             }
                         }
-                    }, (error) => {
-                        console.error("Listen Error:", error);
                     });
                 });
-            } else {
-                // Fallback: Simulasi lokal jika diakses offline/di luar platform
-                globalCount += Math.floor(Math.random() * 50);
-                if (elements.globalCounter) elements.globalCounter.textContent = globalCount.toLocaleString('id-ID');
-                
-                setInterval(() => {
-                    globalCount += Math.floor(Math.random() * 2) + 1;
-                    if (elements.globalCounter) elements.globalCounter.textContent = globalCount.toLocaleString('id-ID');
-                }, 4000 + Math.random() * 5000);
             }
-
-            // Fungsi untuk menambah total di cloud
-            const incrementGlobalCounter = async () => {
-                if (!useFirebase || !auth?.currentUser || !counterDocRef) return;
-                try {
-                    await updateDoc(counterDocRef, {
-                        totalGenerated: increment(1)
-                    });
-                } catch (error) {
-                    console.error("Increment error:", error);
-                }
-            };
             // --- END FIREBASE SETUP ---
 
             // Debounce function to delay generation while typing
